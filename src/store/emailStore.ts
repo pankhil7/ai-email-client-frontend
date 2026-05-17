@@ -16,7 +16,7 @@ interface EmailStore {
   loading: boolean;
   selectedEmail: Email | null;
   setSelectedEmail: (email: Email | null) => void;
-  loadEmails: () => Promise<void>;
+  loadEmails: (maxResults?: number) => Promise<void>;
 
   // Search
   searchQuery: string;
@@ -78,10 +78,10 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     set({ accounts });
   },
 
-  loadEmails: async () => {
+  loadEmails: async (maxResults = 200) => {
     set({ loading: true });
     try {
-      const emails = await api.getEmails(get().activeAccountId || undefined);
+      const emails = await api.getEmails(get().activeAccountId || undefined, maxResults);
       set({ emails, loading: false });
     } catch {
       set({ loading: false });
