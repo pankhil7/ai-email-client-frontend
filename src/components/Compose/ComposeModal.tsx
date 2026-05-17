@@ -63,7 +63,9 @@ export default function ComposeModal() {
   }
 
   return (
-    <div className="fixed bottom-0 right-6 z-50 w-[520px] bg-slate-800 border border-slate-700 rounded-t-xl shadow-2xl flex flex-col max-h-[70vh]">
+    <div className="fixed z-50 bg-slate-800 border border-slate-700 shadow-2xl flex flex-col
+      bottom-0 left-0 right-0 rounded-t-2xl max-h-[90vh]
+      md:bottom-0 md:left-auto md:right-6 md:w-[520px] md:rounded-t-xl md:max-h-[70vh]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-slate-700 rounded-t-xl">
         <span className="font-semibold text-white text-sm">
