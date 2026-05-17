@@ -83,8 +83,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     try {
       const emails = await api.getEmails(get().activeAccountId || undefined);
       set({ emails, loading: false });
-    } catch {
-      set({ loading: false });
+    } catch (err) {
+      console.error('Failed to load emails:', err);
+      set({ loading: false }); // keep existing emails, don't reset to []
     }
   },
 
