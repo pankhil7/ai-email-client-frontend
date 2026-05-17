@@ -1,8 +1,8 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const api = {
-  async getEmails(accountId?: string, maxResults = 200) {
-    const params = new URLSearchParams({ maxResults: String(maxResults) });
+  async getEmails(accountId?: string) {
+    const params = new URLSearchParams();
     if (accountId) params.set('accountId', accountId);
     const res = await fetch(`${API_URL}/api/v1/emails?${params}`);
     if (!res.ok) throw new Error('Failed to fetch emails');

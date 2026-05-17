@@ -146,25 +146,14 @@ export default function EmailList() {
             <p className="text-sm">{searchResults ? 'No results found' : 'No emails'}</p>
           </div>
         ) : (
-          <>
-            {displayEmails.map((email) => (
-              <EmailItem
-                key={email.id}
-                email={email}
-                isSelected={selectedEmail?.id === email.id}
-                onClick={() => handleSelect(email)}
-              />
-            ))}
-            {!searchResults && (
-              <button
-                onClick={() => loadEmails(500)}
-                disabled={loading}
-                className="w-full py-3 text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 transition-colors border-t border-slate-700/30"
-              >
-                {loading ? 'Loading...' : `Load more (showing ${displayEmails.length})`}
-              </button>
-            )}
-          </>
+          displayEmails.map((email) => (
+            <EmailItem
+              key={email.id}
+              email={email}
+              isSelected={selectedEmail?.id === email.id}
+              onClick={() => handleSelect(email)}
+            />
+          ))
         )}
       </div>
     </div>
