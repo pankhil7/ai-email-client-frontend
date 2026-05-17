@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEmailStore } from '@/store/emailStore';
+import { api } from '@/lib/api';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -22,12 +23,16 @@ export default function AuthCallback() {
     }
 
     if (accountId && email && provider === 'gmail') {
-      addAccount({
+      // Register account in backend immediately (no email fetching yet)
+      api.addAccount({
         id: accountId,
         email,
         provider: 'gmail',
         color: '#ea4335',
-      }).then(() => router.push('/'));
+      }).then(() => {
+        // Redirect to inbox right away — emails will load there
+        router.push('/');
+      });
     } else {
       router.push('/');
     }
@@ -37,7 +42,8 @@ export default function AuthCallback() {
     <div className="h-screen flex items-center justify-center bg-slate-950 text-white">
       <div className="text-center">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-slate-400">Connecting your Gmail account...</p>
+        <p className="text-slate-300 font-medium">Gmail connected!</p>
+        <p className="text-slate-500 text-sm mt-1">Redirecting to inbox...</p>
       </div>
     </div>
   );
