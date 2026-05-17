@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useEmailStore } from '@/store/emailStore';
 import {
   Inbox, Send, Archive, Trash2, Star, Settings,
-  Plus, Mail, ChevronDown, ChevronRight
+  Plus, Mail, ChevronDown, ChevronRight, X
 } from 'lucide-react';
 import AccountModal from '../AccountModal/AccountModal';
 
@@ -23,7 +23,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 
 export default function Sidebar() {
-  const { accounts, activeAccountId, activeFolder, setActiveAccount, setActiveFolder, openCompose, emails } = useEmailStore();
+  const { accounts, activeAccountId, activeFolder, setActiveAccount, setActiveFolder, openCompose, emails, removeAccount } = useEmailStore();
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [accountsExpanded, setAccountsExpanded] = useState(true);
 
@@ -93,24 +93,37 @@ export default function Sidebar() {
             {accountsExpanded && (
               <div className="space-y-0.5 mt-1">
                 {accounts.map((account) => (
-                  <button
+                  <div
                     key={account.id}
-                    onClick={() => setActiveAccount(activeAccountId === account.id ? null : account.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                       activeAccountId === account.id
                         ? 'bg-slate-700 text-white'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                     }`}
                   >
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                      style={{ backgroundColor: PROVIDER_COLORS[account.provider] || account.color }}
+                    <button
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                      onClick={() => setActiveAccount(activeAccountId === account.id ? null : account.id)}
                     >
-                      {account.email[0].toUpperCase()}
-                    </div>
-                    <span className="truncate flex-1 text-left">{account.email}</span>
-                    <span className="text-xs text-slate-600 capitalize">{account.provider}</span>
-                  </button>
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ backgroundColor: PROVIDER_COLORS[account.provider] || account.color }}
+                      >
+                        {account.email[0].toUpperCase()}
+                      </div>
+                      <span className="truncate flex-1 text-left">{account.email}</span>
+                      <span className="text-xs text-slate-600 capitalize">{account.provider}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove ${account.email}?`)) removeAccount(account.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-red-400 transition-all flex-shrink-0"
+                      title="Remove account"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
 
                 <button
