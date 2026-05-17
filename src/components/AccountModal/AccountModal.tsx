@@ -39,8 +39,15 @@ export default function AccountModal({ onClose }: AccountModalProps) {
   };
 
   const handleAdd = async () => {
+    // Gmail — redirect to OAuth
+    if (provider === 'gmail') {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      window.location.href = `${apiUrl}/api/v1/auth/google`;
+      return;
+    }
+
     if (!email.trim()) return setError('Email is required');
-    if ((provider === 'imap') && !password.trim()) return setError('Password is required for IMAP');
+    if (provider === 'imap' && !password.trim()) return setError('Password is required for IMAP');
 
     setAdding(true);
     setError('');
