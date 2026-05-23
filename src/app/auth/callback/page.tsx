@@ -4,6 +4,7 @@ import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEmailStore } from '@/store/emailStore';
 import { api } from '@/lib/api';
+import { setAccessToken } from '@/lib/auth';
 import logger from '@/lib/logger';
 
 function AuthCallbackInner() {
@@ -15,7 +16,11 @@ function AuthCallbackInner() {
     const accountId = params.get('accountId');
     const email = params.get('email');
     const provider = params.get('provider');
+    const token = params.get('token');
     const error = params.get('error');
+
+    // Store JWT access token
+    if (token) setAccessToken(token);
 
     if (error) {
       logger.error({ msg: 'OAuth callback error', error });

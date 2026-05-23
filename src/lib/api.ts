@@ -1,10 +1,34 @@
+import { getAccessToken, refreshAccessToken } from './auth';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Authenticated fetch — adds JWT header, silently refreshes on 401, retries once
+async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const token = getAccessToken();
+  const headers = {
+    ...init.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(input, { ...init, headers, credentials: 'include' });
+
+  if (res.status === 401) {
+    // Try silent refresh
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      const retryHeaders = { ...init.headers, Authorization: `Bearer ${newToken}` };
+      return fetch(input, { ...init, headers: retryHeaders, credentials: 'include' });
+    }
+  }
+
+  return res;
+}
 
 export const api = {
   async getEmails(accountId?: string) {
     const params = new URLSearchParams();
     if (accountId) params.set('accountId', accountId);
-    const res = await fetch(`${API_URL}/api/v1/emails?${params}`);
+    const res = await authFetch(`${API_URL}/api/v1/emails?${params}`);
     if (!res.ok) throw new Error('Failed to fetch emails');
     return res.json();
   },
@@ -12,13 +36,13 @@ export const api = {
   async searchEmails(query: string, accountId?: string) {
     const params = new URLSearchParams({ query });
     if (accountId) params.set('accountId', accountId);
-    const res = await fetch(`${API_URL}/api/v1/emails/search?${params}`);
+    const res = await authFetch(`${API_URL}/api/v1/emails/search?${params}`);
     if (!res.ok) throw new Error('Search failed');
     return res.json();
   },
 
   async sendEmail(payload: object) {
-    const res = await fetch(`${API_URL}/api/v1/emails/send`, {
+    const res = await authFetch(`${API_URL}/api/v1/emails/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -28,7 +52,7 @@ export const api = {
   },
 
   async archiveEmail(emailId: string, accountId: string) {
-    const res = await fetch(`${API_URL}/api/v1/emails/${emailId}/archive`, {
+    const res = await authFetch(`${API_URL}/api/v1/emails/${emailId}/archive`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId }),
@@ -37,7 +61,7 @@ export const api = {
   },
 
   async deleteEmail(emailId: string, accountId: string) {
-    const res = await fetch(`${API_URL}/api/v1/emails/${emailId}/delete`, {
+    const res = await authFetch(`${API_URL}/api/v1/emails/${emailId}/delete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId }),
@@ -46,7 +70,7 @@ export const api = {
   },
 
   async markAsRead(emailId: string, accountId: string) {
-    const res = await fetch(`${API_URL}/api/v1/emails/${emailId}/read`, {
+    const res = await authFetch(`${API_URL}/api/v1/emails/${emailId}/read`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accountId }),
@@ -55,12 +79,13 @@ export const api = {
   },
 
   async getAccounts() {
-    const res = await fetch(`${API_URL}/api/v1/accounts`);
+    const res = await authFetch(`${API_URL}/api/v1/accounts`);
+    if (!res.ok) return [];
     return res.json();
   },
 
   async addAccount(account: object) {
-    const res = await fetch(`${API_URL}/api/v1/accounts`, {
+    const res = await authFetch(`${API_URL}/api/v1/accounts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(account),
@@ -69,7 +94,7 @@ export const api = {
   },
 
   async removeAccount(accountId: string) {
-    const res = await fetch(`${API_URL}/api/v1/accounts/${accountId}`, {
+    const res = await authFetch(`${API_URL}/api/v1/accounts/${accountId}`, {
       method: 'DELETE',
     });
     return res.json();
@@ -78,7 +103,7 @@ export const api = {
   async getMoreEmails(offset: number, accountId?: string) {
     const params = new URLSearchParams({ offset: String(offset) });
     if (accountId) params.set('accountId', accountId);
-    const res = await fetch(`${API_URL}/api/v1/emails/more?${params}`);
+    const res = await authFetch(`${API_URL}/api/v1/emails/more?${params}`);
     if (!res.ok) throw new Error('Failed to fetch more emails');
     return res.json() as Promise<{ emails: any[]; status: Record<string, { loading: boolean; total: number; loaded: number }> }>;
   },
@@ -86,13 +111,13 @@ export const api = {
   async getEmailsStatus(accountId?: string) {
     const params = new URLSearchParams();
     if (accountId) params.set('accountId', accountId);
-    const res = await fetch(`${API_URL}/api/v1/emails/status?${params}`);
+    const res = await authFetch(`${API_URL}/api/v1/emails/status?${params}`);
     if (!res.ok) throw new Error('Failed to fetch status');
     return res.json() as Promise<Record<string, { loading: boolean; total: number; loaded: number }>>;
   },
 
   async streamSummary(subject: string, body: string, onChunk: (text: string) => void) {
-    const res = await fetch(`${API_URL}/api/v1/ai/summarize`, {
+    const res = await authFetch(`${API_URL}/api/v1/ai/summarize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subject, body }),
@@ -121,7 +146,7 @@ export const api = {
   },
 
   async streamDraftReply(subject: string, body: string, fromName: string, onChunk: (text: string) => void) {
-    const res = await fetch(`${API_URL}/api/v1/ai/draft-reply`, {
+    const res = await authFetch(`${API_URL}/api/v1/ai/draft-reply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subject, body, fromName }),
@@ -150,7 +175,7 @@ export const api = {
   },
 
   async prioritizeEmail(subject: string, body: string, from: string): Promise<number> {
-    const res = await fetch(`${API_URL}/api/v1/ai/prioritize`, {
+    const res = await authFetch(`${API_URL}/api/v1/ai/prioritize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subject, body, from }),
