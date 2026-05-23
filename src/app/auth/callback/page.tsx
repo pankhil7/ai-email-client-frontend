@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEmailStore } from '@/store/emailStore';
 import { api } from '@/lib/api';
 import logger from '@/lib/logger';
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
   const router = useRouter();
   const params = useSearchParams();
   const { addAccount } = useEmailStore();
@@ -57,5 +57,17 @@ export default function AuthCallback() {
         <p className="text-slate-500 text-sm mt-1">Redirecting to inbox...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen flex items-center justify-center bg-slate-950 text-white">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <AuthCallbackInner />
+    </Suspense>
   );
 }
