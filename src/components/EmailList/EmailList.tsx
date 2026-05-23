@@ -85,7 +85,7 @@ export default function EmailList() {
   const {
     emails, searchResults, searchQuery, selectedEmail, loading, loadingProgress,
     setSelectedEmail, markAsRead, search, setSearchQuery, clearSearch, loadEmails,
-    userLabels, activeLabel,
+    userLabels, activeLabel, setActiveLabel,
   } = useEmailStore();
 
   const [searching, setSearching] = useState(false);
@@ -121,7 +121,7 @@ export default function EmailList() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="font-semibold text-white text-sm">
-              {searchResults ? `Results (${searchResults.length})` : `Inbox (${emails.length})`}
+              {searchResults ? `Results (${searchResults.length})` : activeLabel ? `${activeLabel} (${allEmails.length})` : `Inbox (${emails.length})`}
             </h2>
             {loadingProgress && (
               <p className="text-[10px] text-slate-500 mt-0.5">
@@ -129,12 +129,23 @@ export default function EmailList() {
               </p>
             )}
           </div>
-          <button
-            onClick={loadEmails}
-            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            {activeLabel && (
+              <button
+                onClick={() => setActiveLabel(null)}
+                className="p-1.5 text-indigo-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                title="Clear label filter"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={loadEmails}
+              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Search */}

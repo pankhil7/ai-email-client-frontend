@@ -56,6 +56,8 @@ interface EmailStore {
   removeLabel: (emailId: string, label: string) => void;
   activeLabel: string | null;
   setActiveLabel: (label: string | null) => void;
+  labelingProgress: { labeled: number; total: number } | null;
+  autoLabelEmails: () => Promise<void>;
 }
 
 let _pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -74,6 +76,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   activeFolder: 'inbox',
   userLabels: new Map(),
   activeLabel: null,
+  labelingProgress: null,
 
   setActiveAccount: (id) => {
     set({ activeAccountId: id, selectedEmail: null, searchResults: null });
@@ -112,6 +115,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       logger.info({ msg: 'Emails loaded', count: emails.length });
       set({ emails, loading: false });
       get().startBackgroundPolling();
+      get().autoLabelEmails();
     } catch (err: any) {
       logger.error({ msg: 'Failed to load emails', err });
       set({ loading: false });
@@ -236,6 +240,48 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   },
 
   setActiveFolder: (folder) => set({ activeFolder: folder }),
+
+  autoLabelEmails: async () => {
+    const { emails, userLabels } = get();
+    if (emails.length === 0) return;
+
+    // Only label emails that don't already have a user label
+    const unlabeled = emails.filter((e) => !(userLabels.get(e.id)?.length));
+    if (unlabeled.length === 0) return;
+
+    const total = unlabeled.length;
+    set({ labelingProgress: { labeled: 0, total } });
+
+    // Label first 10 immediately, rest in background
+    const first10 = unlabeled.slice(0, 10);
+    const rest = unlabeled.slice(10);
+
+    const labelOne = async (emailId: string, subject: string, body: string) => {
+      try {
+        const label = await api.labelEmail(subject, body);
+        if (label) {
+          get().addLabel(emailId, label);
+        }
+      } catch {}
+      set((s) => ({
+        labelingProgress: s.labelingProgress
+          ? { ...s.labelingProgress, labeled: s.labelingProgress.labeled + 1 }
+          : null,
+      }));
+    };
+
+    // First 10 — run concurrently
+    await Promise.all(first10.map((e) => labelOne(e.id, e.subject, e.bodyText)));
+
+    // Rest — run in background sequentially to avoid rate limits
+    (async () => {
+      for (const e of rest) {
+        await labelOne(e.id, e.subject, e.bodyText);
+        await new Promise((r) => setTimeout(r, 200)); // small delay between calls
+      }
+      set({ labelingProgress: null });
+    })();
+  },
 
   addLabel: (emailId, label) => set((s) => {
     const updated = new Map(s.userLabels);

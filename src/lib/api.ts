@@ -174,6 +174,16 @@ export const api = {
     }
   },
 
+  async labelEmail(subject: string, body: string): Promise<string> {
+    const res = await authFetch(`${API_URL}/api/v1/ai/label`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, body }),
+    });
+    const data = await res.json();
+    return data.label || '';
+  },
+
   async prioritizeEmail(subject: string, body: string, from: string): Promise<number> {
     const res = await authFetch(`${API_URL}/api/v1/ai/prioritize`, {
       method: 'POST',
