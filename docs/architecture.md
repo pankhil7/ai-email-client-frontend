@@ -64,8 +64,9 @@ AI-first universal email client as a mobile-ready PWA. Two separate repos:
           │                │
     ┌─────▼────────────────▼──────┐
     │     PostgreSQL (Railway)    │
-    │  accounts, tokens,          │
-    │  refresh_tokens             │
+    │  accounts (+ user_id)       │
+    │  tokens, refresh_tokens     │
+    │  email_labels (+ user_id)   │
     └─────────────────────────────┘
 ```
 
@@ -83,23 +84,43 @@ AI-first universal email client as a mobile-ready PWA. Two separate repos:
 | Styling | Tailwind CSS | Fast mobile-first development |
 | Auth (API) | JWT access token (15min) + httpOnly refresh token (7 days) | Secure, stateless, silent refresh |
 | Auth (email) | OAuth 2.0 per provider | Industry standard, no password storage |
+| Multi-user isolation | user_id column on accounts + email_labels | Each user only sees their own data |
 | Database | PostgreSQL on Railway | Persistent across deploys, free tier |
 | Email loading | First 50 immediate + background chunks | Fast perceived load time |
 
 ---
 
-## Authentication Flow
+## Authentication & User Isolation Flow
 
 ```
 User clicks "Add Gmail"
   → GET /auth/google → Google OAuth consent screen
   → Google → GET /auth/google/callback
-    → Backend issues JWT (15min) + refresh token (7 days, httpOnly cookie)
+    → Fetch user email from Google (e.g. you@gmail.com)
+    → Issue JWT: { sub: "you@gmail.com" } (15min)
+    → Issue refresh token stored in DB with user_id = "you@gmail.com" (7 days, httpOnly cookie)
     → Redirects to /auth/callback?token=<jwt>
   → Frontend stores JWT in localStorage
   → Every API request: Authorization: Bearer <jwt>
-  → On 401: POST /auth/refresh (sends cookie) → new JWT → retry request
+    → Middleware: jwt.verify() → req.userId = "you@gmail.com"
+    → All DB/cache queries filtered by req.userId
+  → On 401: POST /auth/refresh (sends cookie)
+    → Looks up refresh_tokens row → reads user_id → issues new JWT with same sub
+    → Frontend retries request with new token
 ```
+
+### User Isolation
+
+Every protected endpoint extracts `req.userId` from the JWT `sub` claim and scopes all data to it:
+
+| Data | Isolation mechanism |
+|------|---------------------|
+| Accounts | In-memory filter: `accounts.filter(a => a.userId === req.userId)` |
+| Emails | Fetched only from the user's own accounts |
+| Labels | `WHERE user_id = $1` on all `email_labels` queries |
+| Refresh tokens | `user_id` column — re-issued JWT always carries the same user identity |
+
+A user who connects their own Gmail account gets a JWT with their email as `sub`. They can never see accounts, emails, or labels belonging to a different `sub`.
 
 ---
 
@@ -117,8 +138,10 @@ All AI features use **Groq API** (llama-3.3-70b-versatile):
 **Auto-labeling flow:**
 ```
 Emails load
-  → First 10 labeled immediately (parallel API calls)
-  → Remaining labeled in background (sequential, 200ms delay)
+  → Skip already-labeled emails (loaded from DB — never re-classify)
+  → First 3 unlabeled emails → Promise.all (parallel Groq calls)
+  → Remaining unlabeled → sequential, 2s delay between each (Groq RPM limit)
+  → Each label saved to PostgreSQL immediately (persisted across sessions)
   → Progress bar shown in sidebar (labeled / total)
   → Labels: Work, Personal, Urgent, Follow Up, Newsletter, Finance
 ```
@@ -164,13 +187,15 @@ GET /api/v1/emails
 
 ```
 loadEmails() completes
+  → loadLabels() already ran in parallel → userLabels map populated from DB
   → autoLabelEmails() starts
-  → First 10 emails → Promise.all(labelEmail(subject, body))
-      → POST /api/v1/ai/label
-        → Groq classifies into Work/Personal/Urgent/etc.
-      → addLabel(emailId, label) → Zustand state update
-      → Label chip appears on email immediately
+  → Filter: skip emails already in userLabels map (no re-classification)
+  → First 3 unlabeled → Promise.all(labelOne())
+      → POST /api/v1/ai/label → Groq → "Work" / "Personal" / etc.
+      → addLabel(emailId, label) → optimistic Zustand update + api.saveLabel() to DB
+      → Label chip appears on email row and detail view immediately
   → labelingProgress updates → sidebar progress bar animates
-  → Remaining emails → sequential with 200ms delay
+  → Remaining unlabeled → sequential, await 2s between each (stays under Groq 30 RPM)
   → labelingProgress set to null → progress bar disappears
+  → Next session: all labels already in DB → autoLabelEmails() returns immediately
 ```
