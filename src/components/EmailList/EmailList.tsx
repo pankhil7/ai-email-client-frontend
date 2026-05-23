@@ -5,6 +5,15 @@ import { Email } from '@/types/email';
 import { Search, RefreshCw, X, Paperclip } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 
+const LABEL_COLORS: Record<string, string> = {
+  Work: 'bg-blue-500/20 text-blue-400',
+  Personal: 'bg-green-500/20 text-green-400',
+  Urgent: 'bg-red-500/20 text-red-400',
+  'Follow Up': 'bg-orange-500/20 text-orange-400',
+  Newsletter: 'bg-purple-500/20 text-purple-400',
+  Finance: 'bg-yellow-500/20 text-yellow-400',
+};
+
 const PROVIDER_COLORS: Record<string, string> = {
   gmail: '#ea4335',
   office365: '#0078d4',
@@ -13,7 +22,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 
 const PRIORITY_COLORS = ['', '', '', 'text-green-400', 'text-green-400', 'text-yellow-400', 'text-yellow-400', 'text-orange-400', 'text-orange-400', 'text-red-400', 'text-red-500'];
 
-function EmailItem({ email, isSelected, onClick }: { email: Email; isSelected: boolean; onClick: () => void }) {
+function EmailItem({ email, isSelected, onClick, labels }: { email: Email; isSelected: boolean; onClick: () => void; labels: string[] }) {
   const date = new Date(email.date);
   const isToday = new Date().toDateString() === date.toDateString();
   const timeStr = isToday
@@ -57,6 +66,15 @@ function EmailItem({ email, isSelected, onClick }: { email: Email; isSelected: b
             </span>
             {email.hasAttachments && <Paperclip className="w-3 h-3 text-slate-500 flex-shrink-0" />}
           </div>
+          {labels.length > 0 && (
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {labels.map((label) => (
+                <span key={label} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${LABEL_COLORS[label] || 'bg-slate-700 text-slate-400'}`}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </button>
@@ -66,7 +84,8 @@ function EmailItem({ email, isSelected, onClick }: { email: Email; isSelected: b
 export default function EmailList() {
   const {
     emails, searchResults, searchQuery, selectedEmail, loading, loadingProgress,
-    setSelectedEmail, markAsRead, search, setSearchQuery, clearSearch, loadEmails
+    setSelectedEmail, markAsRead, search, setSearchQuery, clearSearch, loadEmails,
+    userLabels, activeLabel,
   } = useEmailStore();
 
   const [searching, setSearching] = useState(false);
@@ -76,7 +95,10 @@ export default function EmailList() {
   // Reset to page 0 when the email list or search results change
   useEffect(() => { setPage(0); }, [emails, searchResults]);
 
-  const allEmails = searchResults ?? emails;
+  const baseEmails = searchResults ?? emails;
+  const allEmails = activeLabel
+    ? baseEmails.filter((e) => (userLabels.get(e.id) || []).includes(activeLabel))
+    : baseEmails;
   const totalPages = Math.ceil(allEmails.length / PAGE_SIZE);
   const displayEmails = allEmails.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -166,6 +188,7 @@ export default function EmailList() {
               email={email}
               isSelected={selectedEmail?.id === email.id}
               onClick={() => handleSelect(email)}
+              labels={userLabels.get(email.id) || []}
             />
           ))
         )}

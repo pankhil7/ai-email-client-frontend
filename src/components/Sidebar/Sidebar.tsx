@@ -4,8 +4,18 @@ import { useState } from 'react';
 import { useEmailStore } from '@/store/emailStore';
 import {
   Inbox, Send, Archive, Trash2, Star, Settings,
-  Plus, Mail, ChevronDown, ChevronRight, X
+  Plus, Mail, ChevronDown, ChevronRight, X, Tag
 } from 'lucide-react';
+
+const PRESET_LABELS = ['Work', 'Personal', 'Urgent', 'Follow Up', 'Newsletter', 'Finance'];
+const LABEL_COLORS: Record<string, string> = {
+  Work: '#3b82f6',
+  Personal: '#22c55e',
+  Urgent: '#ef4444',
+  'Follow Up': '#f97316',
+  Newsletter: '#a855f7',
+  Finance: '#eab308',
+};
 import AccountModal from '../AccountModal/AccountModal';
 
 const FOLDERS = [
@@ -22,7 +32,7 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 
 export default function Sidebar() {
-  const { accounts, activeAccountId, activeFolder, setActiveAccount, setActiveFolder, openCompose, emails, removeAccount } = useEmailStore();
+  const { accounts, activeAccountId, activeFolder, setActiveAccount, setActiveFolder, openCompose, emails, removeAccount, activeLabel, setActiveLabel } = useEmailStore();
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [accountsExpanded, setAccountsExpanded] = useState(true);
 
@@ -77,6 +87,34 @@ export default function Sidebar() {
                 </button>
               );
             })}
+          </div>
+
+          {/* Labels */}
+          <div className="mt-4">
+            <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <Tag className="w-3 h-3" />
+              Labels
+            </div>
+            <div className="space-y-0.5 mt-1">
+              {PRESET_LABELS.map((label) => (
+                <button
+                  key={label}
+                  onClick={() => {
+                    setActiveLabel(activeLabel === label ? null : label);
+                    setActiveFolder('inbox');
+                    setActiveAccount(null);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    activeLabel === label
+                      ? 'bg-slate-700 text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: LABEL_COLORS[label] }} />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Accounts */}

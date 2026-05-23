@@ -49,6 +49,13 @@ interface EmailStore {
   // Folder
   activeFolder: string;
   setActiveFolder: (folder: string) => void;
+
+  // Labels
+  userLabels: Map<string, string[]>;
+  addLabel: (emailId: string, label: string) => void;
+  removeLabel: (emailId: string, label: string) => void;
+  activeLabel: string | null;
+  setActiveLabel: (label: string | null) => void;
 }
 
 let _pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -65,6 +72,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   composing: false,
   composeData: {},
   activeFolder: 'inbox',
+  userLabels: new Map(),
+  activeLabel: null,
 
   setActiveAccount: (id) => {
     set({ activeAccountId: id, selectedEmail: null, searchResults: null });
@@ -227,4 +236,20 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   },
 
   setActiveFolder: (folder) => set({ activeFolder: folder }),
+
+  addLabel: (emailId, label) => set((s) => {
+    const updated = new Map(s.userLabels);
+    const existing = updated.get(emailId) || [];
+    if (!existing.includes(label)) updated.set(emailId, [...existing, label]);
+    return { userLabels: updated };
+  }),
+
+  removeLabel: (emailId, label) => set((s) => {
+    const updated = new Map(s.userLabels);
+    const existing = updated.get(emailId) || [];
+    updated.set(emailId, existing.filter((l) => l !== label));
+    return { userLabels: updated };
+  }),
+
+  setActiveLabel: (label) => set({ activeLabel: label }),
 }));

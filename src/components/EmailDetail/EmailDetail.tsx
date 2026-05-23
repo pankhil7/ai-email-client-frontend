@@ -1,9 +1,19 @@
 'use client';
 
 import { useEmailStore } from '@/store/emailStore';
-import { Archive, Trash2, Reply, Forward, MoreHorizontal, X, Star } from 'lucide-react';
+import { Archive, Trash2, Reply, Forward, X, Tag } from 'lucide-react';
 import { useState } from 'react';
 import AIPanel from '../AI/AIPanel';
+
+const PRESET_LABELS = ['Work', 'Personal', 'Urgent', 'Follow Up', 'Newsletter', 'Finance'];
+const LABEL_COLORS: Record<string, string> = {
+  Work: 'bg-blue-500/20 text-blue-400',
+  Personal: 'bg-green-500/20 text-green-400',
+  Urgent: 'bg-red-500/20 text-red-400',
+  'Follow Up': 'bg-orange-500/20 text-orange-400',
+  Newsletter: 'bg-purple-500/20 text-purple-400',
+  Finance: 'bg-yellow-500/20 text-yellow-400',
+};
 
 const PROVIDER_LABELS: Record<string, string> = {
   gmail: 'Gmail',
@@ -18,8 +28,11 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 
 export default function EmailDetail() {
-  const { selectedEmail, setSelectedEmail, archiveEmail, deleteEmail, openCompose } = useEmailStore();
+  const { selectedEmail, setSelectedEmail, archiveEmail, deleteEmail, openCompose, userLabels, addLabel, removeLabel } = useEmailStore();
   const [showAI, setShowAI] = useState(false);
+  const [showLabelPicker, setShowLabelPicker] = useState(false);
+
+  const emailLabels = selectedEmail ? (userLabels.get(selectedEmail.id) || []) : [];
 
   if (!selectedEmail) {
     return (
@@ -98,6 +111,39 @@ export default function EmailDetail() {
           >
             <Forward className="w-4 h-4" />
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowLabelPicker(!showLabelPicker)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${
+                showLabelPicker ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+              title="Add label"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              <span>Label</span>
+            </button>
+            {showLabelPicker && (
+              <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 p-2 min-w-[160px]">
+                {PRESET_LABELS.map((label) => {
+                  const active = emailLabels.includes(label);
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => {
+                        active ? removeLabel(selectedEmail!.id, label) : addLabel(selectedEmail!.id, label);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between gap-2 ${
+                        active ? 'bg-indigo-600/20 text-indigo-300' : 'text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      {label}
+                      {active && <span>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setShowAI(!showAI)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${
@@ -150,11 +196,15 @@ export default function EmailDetail() {
           </div>
 
           {/* Labels */}
-          {selectedEmail.labels && selectedEmail.labels.filter(l => !['UNREAD', 'INBOX', 'SENT'].includes(l)).length > 0 && (
+          {emailLabels.length > 0 && (
             <div className="flex gap-1.5 mb-4 flex-wrap">
-              {selectedEmail.labels.filter(l => !['UNREAD', 'INBOX', 'SENT'].includes(l)).map((label) => (
-                <span key={label} className="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full">
+              {emailLabels.map((label) => (
+                <span
+                  key={label}
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${LABEL_COLORS[label] || 'bg-slate-700 text-slate-300'}`}
+                >
                   {label}
+                  <button onClick={() => removeLabel(selectedEmail.id, label)} className="opacity-60 hover:opacity-100">×</button>
                 </span>
               ))}
             </div>
