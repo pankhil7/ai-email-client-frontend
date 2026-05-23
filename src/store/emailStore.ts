@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Email, EmailAccount, ComposeData } from '@/types/email';
 import { api } from '@/lib/api';
+import logger from '@/lib/logger';
 
 interface LoadingProgress {
   loading: boolean;
@@ -71,12 +72,14 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   },
 
   addAccount: async (account) => {
+    logger.info({ msg: 'Adding account', accountId: account.id, provider: account.provider });
     await api.addAccount(account);
     set((s) => ({ accounts: [...s.accounts, account] }));
     await get().loadEmails();
   },
 
   removeAccount: async (id) => {
+    logger.info({ msg: 'Removing account', accountId: id });
     await api.removeAccount(id);
     set((s) => ({
       accounts: s.accounts.filter((a) => a.id !== id),
@@ -87,6 +90,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
   loadAccounts: async () => {
     const accounts = await api.getAccounts();
+    logger.info({ msg: 'Accounts loaded', count: accounts.length });
     set({ accounts });
   },
 
@@ -94,12 +98,13 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     get().stopBackgroundPolling();
     set({ loading: true, loadingProgress: null });
     try {
+      logger.debug({ msg: 'Loading emails', accountId: get().activeAccountId });
       const emails = await api.getEmails(get().activeAccountId || undefined);
+      logger.info({ msg: 'Emails loaded', count: emails.length });
       set({ emails, loading: false });
-      // Start polling for background-loaded emails
       get().startBackgroundPolling();
-    } catch (err) {
-      console.error('Failed to load emails:', err);
+    } catch (err: any) {
+      logger.error({ msg: 'Failed to load emails', error: err.message });
       set({ loading: false });
     }
   },
@@ -143,8 +148,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         } else {
           set({ loadingProgress: null });
         }
-      } catch {
-        // silently stop on error
+      } catch (err: any) {
+        logger.warn({ msg: 'Background polling failed', error: err.message });
       }
     };
 
@@ -167,9 +172,12 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     if (!searchQuery.trim()) return get().clearSearch();
     set({ loading: true });
     try {
+      logger.debug({ msg: 'Searching emails', query: searchQuery });
       const results = await api.searchEmails(searchQuery, activeAccountId || undefined);
+      logger.info({ msg: 'Search complete', count: results.length });
       set({ searchResults: results, loading: false });
-    } catch {
+    } catch (err: any) {
+      logger.error({ msg: 'Search failed', error: err.message });
       set({ loading: false });
     }
   },
@@ -180,26 +188,42 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   closeCompose: () => set({ composing: false, composeData: {} }),
 
   archiveEmail: async (email) => {
-    await api.archiveEmail(email.id, email.accountId);
-    set((s) => ({
-      emails: s.emails.filter((e) => e.id !== email.id),
-      selectedEmail: s.selectedEmail?.id === email.id ? null : s.selectedEmail,
-    }));
+    try {
+      logger.info({ msg: 'Archiving email', emailId: email.id });
+      await api.archiveEmail(email.id, email.accountId);
+      set((s) => ({
+        emails: s.emails.filter((e) => e.id !== email.id),
+        selectedEmail: s.selectedEmail?.id === email.id ? null : s.selectedEmail,
+      }));
+    } catch (err: any) {
+      logger.error({ msg: 'Archive failed', emailId: email.id, error: err.message });
+      throw err;
+    }
   },
 
   deleteEmail: async (email) => {
-    await api.deleteEmail(email.id, email.accountId);
-    set((s) => ({
-      emails: s.emails.filter((e) => e.id !== email.id),
-      selectedEmail: s.selectedEmail?.id === email.id ? null : s.selectedEmail,
-    }));
+    try {
+      logger.info({ msg: 'Deleting email', emailId: email.id });
+      await api.deleteEmail(email.id, email.accountId);
+      set((s) => ({
+        emails: s.emails.filter((e) => e.id !== email.id),
+        selectedEmail: s.selectedEmail?.id === email.id ? null : s.selectedEmail,
+      }));
+    } catch (err: any) {
+      logger.error({ msg: 'Delete failed', emailId: email.id, error: err.message });
+      throw err;
+    }
   },
 
   markAsRead: async (email) => {
-    await api.markAsRead(email.id, email.accountId);
-    set((s) => ({
-      emails: s.emails.map((e) => (e.id === email.id ? { ...e, read: true } : e)),
-    }));
+    try {
+      await api.markAsRead(email.id, email.accountId);
+      set((s) => ({
+        emails: s.emails.map((e) => (e.id === email.id ? { ...e, read: true } : e)),
+      }));
+    } catch (err: any) {
+      logger.warn({ msg: 'Mark as read failed', emailId: email.id, error: err.message });
+    }
   },
 
   setActiveFolder: (folder) => set({ activeFolder: folder }),

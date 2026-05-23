@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEmailStore } from '@/store/emailStore';
 import { api } from '@/lib/api';
+import logger from '@/lib/logger';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function AuthCallback() {
     const error = params.get('error');
 
     if (error) {
+      logger.error({ msg: 'OAuth callback error', error });
       alert(`Auth failed: ${error}`);
       router.push('/');
       return;
@@ -28,13 +30,21 @@ export default function AuthCallback() {
     };
 
     if (accountId && email && provider && PROVIDER_COLORS[provider]) {
+      logger.info({ msg: 'OAuth callback success', accountId, provider });
       api.addAccount({
         id: accountId,
         email,
         provider,
         color: PROVIDER_COLORS[provider],
-      }).then(() => router.push('/'));
+      }).then(() => {
+        logger.info({ msg: 'Account registered, redirecting to inbox' });
+        router.push('/');
+      }).catch((err: any) => {
+        logger.error({ msg: 'Failed to register account', error: err.message });
+        router.push('/');
+      });
     } else {
+      logger.warn({ msg: 'OAuth callback missing params', accountId, email, provider });
       router.push('/');
     }
   }, []);

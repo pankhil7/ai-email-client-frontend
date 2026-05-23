@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Email } from '@/types/email';
 import { api } from '@/lib/api';
 import { Loader2, X } from 'lucide-react';
+import logger from '@/lib/logger';
 
 interface AIPanelProps {
   email: Email;
@@ -36,26 +37,47 @@ export default function AIPanel({ email, onUseDraft, onClose }: AIPanelProps) {
   const handleSummarize = async () => {
     setSummary('');
     setLoadingSummary(true);
-    await api.streamSummary(email.subject, email.bodyText, (chunk) => {
-      setSummary((prev) => prev + chunk);
-    });
-    setLoadingSummary(false);
+    try {
+      logger.info({ msg: 'AI summarize started', emailId: email.id });
+      await api.streamSummary(email.subject, email.bodyText, (chunk) => {
+        setSummary((prev) => prev + chunk);
+      });
+      logger.debug({ msg: 'AI summarize complete', emailId: email.id });
+    } catch (err: any) {
+      logger.error({ msg: 'AI summarize failed', emailId: email.id, error: err.message });
+    } finally {
+      setLoadingSummary(false);
+    }
   };
 
   const handleDraftReply = async () => {
     setDraft('');
     setLoadingDraft(true);
-    await api.streamDraftReply(email.subject, email.bodyText, email.from.name, (chunk) => {
-      setDraft((prev) => prev + chunk);
-    });
-    setLoadingDraft(false);
+    try {
+      logger.info({ msg: 'AI draft reply started', emailId: email.id });
+      await api.streamDraftReply(email.subject, email.bodyText, email.from.name, (chunk) => {
+        setDraft((prev) => prev + chunk);
+      });
+      logger.debug({ msg: 'AI draft reply complete', emailId: email.id });
+    } catch (err: any) {
+      logger.error({ msg: 'AI draft reply failed', emailId: email.id, error: err.message });
+    } finally {
+      setLoadingDraft(false);
+    }
   };
 
   const handlePrioritize = async () => {
     setLoadingPriority(true);
-    const score = await api.prioritizeEmail(email.subject, email.bodyText, email.from.email);
-    setPriorityKey(getPriorityKey(score));
-    setLoadingPriority(false);
+    try {
+      logger.info({ msg: 'AI prioritize started', emailId: email.id });
+      const score = await api.prioritizeEmail(email.subject, email.bodyText, email.from.email);
+      logger.info({ msg: 'AI prioritize complete', emailId: email.id, score });
+      setPriorityKey(getPriorityKey(score));
+    } catch (err: any) {
+      logger.error({ msg: 'AI prioritize failed', emailId: email.id, error: err.message });
+    } finally {
+      setLoadingPriority(false);
+    }
   };
 
   const priority = priorityKey ? PRIORITY_CONFIG[priorityKey] : null;
