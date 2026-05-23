@@ -19,9 +19,6 @@ const FOLDERS = [
 const PROVIDER_COLORS: Record<string, string> = {
   gmail: '#ea4335',
   office365: '#0078d4',
-  yahoo: '#6001d2',
-  aol: '#ff0b00',
-  imap: '#9333ea',
 };
 
 export default function Sidebar() {
