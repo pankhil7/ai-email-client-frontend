@@ -129,8 +129,8 @@ export default function EmailDetail() {
                   return (
                     <button
                       key={label}
-                      onClick={() => {
-                        active ? removeLabel(selectedEmail!.id, label) : addLabel(selectedEmail!.id, label);
+                      onClick={async () => {
+                        active ? await removeLabel(selectedEmail!.id, label) : await addLabel(selectedEmail!.id, label);
                       }}
                       className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between gap-2 ${
                         active ? 'bg-indigo-600/20 text-indigo-300' : 'text-slate-300 hover:bg-slate-700'
@@ -204,7 +204,7 @@ export default function EmailDetail() {
                   className={`text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${LABEL_COLORS[label] || 'bg-slate-700 text-slate-300'}`}
                 >
                   {label}
-                  <button onClick={() => removeLabel(selectedEmail.id, label)} className="opacity-60 hover:opacity-100">×</button>
+                  <button onClick={async () => await removeLabel(selectedEmail.id, label)} className="opacity-60 hover:opacity-100">×</button>
                 </span>
               ))}
             </div>

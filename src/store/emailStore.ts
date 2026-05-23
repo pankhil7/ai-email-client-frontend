@@ -52,8 +52,9 @@ interface EmailStore {
 
   // Labels
   userLabels: Map<string, string[]>;
-  addLabel: (emailId: string, label: string) => void;
-  removeLabel: (emailId: string, label: string) => void;
+  loadLabels: () => Promise<void>;
+  addLabel: (emailId: string, label: string) => Promise<void>;
+  removeLabel: (emailId: string, label: string) => Promise<void>;
   activeLabel: string | null;
   setActiveLabel: (label: string | null) => void;
   labelingProgress: { labeled: number; total: number } | null;
@@ -111,7 +112,10 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     set({ loading: true, loadingProgress: null });
     try {
       logger.debug({ msg: 'Loading emails', accountId: get().activeAccountId });
-      const emails = await api.getEmails(get().activeAccountId || undefined);
+      const [emails] = await Promise.all([
+        api.getEmails(get().activeAccountId || undefined),
+        get().loadLabels(),
+      ]);
       logger.info({ msg: 'Emails loaded', count: emails.length });
       set({ emails, loading: false });
       get().startBackgroundPolling();
@@ -245,23 +249,17 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     const { emails, userLabels } = get();
     if (emails.length === 0) return;
 
-    // Only label emails that don't already have a user label
+    // Skip emails already labeled in DB
     const unlabeled = emails.filter((e) => !(userLabels.get(e.id)?.length));
     if (unlabeled.length === 0) return;
 
     const total = unlabeled.length;
     set({ labelingProgress: { labeled: 0, total } });
 
-    // Label first 10 immediately, rest in background
-    const first10 = unlabeled.slice(0, 10);
-    const rest = unlabeled.slice(10);
-
     const labelOne = async (emailId: string, subject: string, body: string) => {
       try {
         const label = await api.labelEmail(subject, body);
-        if (label) {
-          get().addLabel(emailId, label);
-        }
+        if (label) await get().addLabel(emailId, label); // persists to DB
       } catch {}
       set((s) => ({
         labelingProgress: s.labelingProgress
@@ -270,32 +268,63 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       }));
     };
 
-    // First 10 — run concurrently
-    await Promise.all(first10.map((e) => labelOne(e.id, e.subject, e.bodyText)));
+    // First 3 immediately in parallel
+    const first3 = unlabeled.slice(0, 3);
+    const remaining = unlabeled.slice(3);
+    await Promise.all(first3.map((e) => labelOne(e.id, e.subject, e.bodyText)));
 
-    // Rest — run in background sequentially to avoid rate limits
+    // Rest sequentially with 2s delay to stay under Groq RPM limit
     (async () => {
-      for (const e of rest) {
+      for (const e of remaining) {
         await labelOne(e.id, e.subject, e.bodyText);
-        await new Promise((r) => setTimeout(r, 200)); // small delay between calls
+        await new Promise((r) => setTimeout(r, 2000));
       }
       set({ labelingProgress: null });
     })();
   },
 
-  addLabel: (emailId, label) => set((s) => {
-    const updated = new Map(s.userLabels);
-    const existing = updated.get(emailId) || [];
-    if (!existing.includes(label)) updated.set(emailId, [...existing, label]);
-    return { userLabels: updated };
-  }),
+  loadLabels: async () => {
+    try {
+      const rows = await api.getLabels();
+      const map = new Map<string, string[]>();
+      rows.forEach(({ email_id, label }) => {
+        const existing = map.get(email_id) || [];
+        if (!existing.includes(label)) map.set(email_id, [...existing, label]);
+      });
+      set({ userLabels: map });
+      logger.debug({ msg: 'Labels loaded from DB', count: rows.length });
+    } catch (err: any) {
+      logger.warn({ msg: 'Failed to load labels', err });
+    }
+  },
 
-  removeLabel: (emailId, label) => set((s) => {
-    const updated = new Map(s.userLabels);
-    const existing = updated.get(emailId) || [];
-    updated.set(emailId, existing.filter((l) => l !== label));
-    return { userLabels: updated };
-  }),
+  addLabel: async (emailId, label) => {
+    set((s) => {
+      const updated = new Map(s.userLabels);
+      const existing = updated.get(emailId) || [];
+      if (!existing.includes(label)) updated.set(emailId, [...existing, label]);
+      return { userLabels: updated };
+    });
+    try {
+      await api.saveLabel(emailId, label);
+    } catch (err: any) {
+      logger.warn({ msg: 'Failed to save label to DB', emailId, label, err });
+    }
+  },
+
+  removeLabel: async (emailId, label) => {
+    set((s) => {
+      const updated = new Map(s.userLabels);
+      const existing = updated.get(emailId) || [];
+      updated.set(emailId, existing.filter((l) => l !== label));
+      return { userLabels: updated };
+    });
+    try {
+      await api.deleteLabel(emailId, label);
+    } catch (err: any) {
+      logger.warn({ msg: 'Failed to delete label from DB', emailId, label, err });
+    }
+  },
 
   setActiveLabel: (label) => set({ activeLabel: label }),
 }));

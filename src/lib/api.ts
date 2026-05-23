@@ -174,6 +174,26 @@ export const api = {
     }
   },
 
+  async getLabels(): Promise<{ email_id: string; label: string }[]> {
+    const res = await authFetch(`${API_URL}/api/v1/emails/labels`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async saveLabel(emailId: string, label: string): Promise<void> {
+    await authFetch(`${API_URL}/api/v1/emails/${emailId}/labels`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label }),
+    });
+  },
+
+  async deleteLabel(emailId: string, label: string): Promise<void> {
+    await authFetch(`${API_URL}/api/v1/emails/${emailId}/labels/${encodeURIComponent(label)}`, {
+      method: 'DELETE',
+    });
+  },
+
   async labelEmail(subject: string, body: string): Promise<string> {
     const res = await authFetch(`${API_URL}/api/v1/ai/label`, {
       method: 'POST',
