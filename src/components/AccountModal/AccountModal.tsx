@@ -39,10 +39,15 @@ export default function AccountModal({ onClose }: AccountModalProps) {
   };
 
   const handleAdd = async () => {
-    // Gmail — redirect to OAuth
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+    // OAuth providers — redirect
     if (provider === 'gmail') {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
       window.location.href = `${apiUrl}/api/v1/auth/google`;
+      return;
+    }
+    if (provider === 'office365') {
+      window.location.href = `${apiUrl}/api/v1/auth/microsoft`;
       return;
     }
 
@@ -110,17 +115,19 @@ export default function AccountModal({ onClose }: AccountModalProps) {
             </div>
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full bg-slate-900 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
-            />
-          </div>
+          {/* Email — only needed for IMAP accounts */}
+          {provider === 'imap' && (
+            <div>
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 block">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full bg-slate-900 border border-slate-700 text-slate-200 placeholder-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+          )}
 
           {/* IMAP Fields */}
           {provider === 'imap' && (
@@ -163,13 +170,22 @@ export default function AccountModal({ onClose }: AccountModalProps) {
 
           {provider === 'gmail' && (
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-              <p className="text-xs text-blue-400">Gmail requires OAuth. After adding, you'll be redirected to sign in with Google.</p>
+              <p className="text-xs text-blue-300 font-medium mb-1">🔴 Sign in with Google</p>
+              <p className="text-xs text-blue-400">You'll be taken to Google to sign in securely. No password is stored.</p>
             </div>
           )}
 
           {provider === 'office365' && (
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-              <p className="text-xs text-blue-400">Office 365 requires Microsoft OAuth. After adding, you'll be redirected to sign in with Microsoft.</p>
+              <p className="text-xs text-blue-300 font-medium mb-1">🔵 Sign in with Microsoft</p>
+              <p className="text-xs text-blue-400">You'll be taken to Microsoft to sign in securely. No password is stored.</p>
+            </div>
+          )}
+
+          {provider === 'imap' && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+              <p className="text-xs text-amber-300 font-medium mb-1">🔑 Use an App Password</p>
+              <p className="text-xs text-amber-400">Yahoo and AOL don't allow your regular password here. Go to your account security settings and generate an <strong>App Password</strong>, then paste it above.</p>
             </div>
           )}
 

@@ -22,17 +22,18 @@ export default function AuthCallback() {
       return;
     }
 
-    if (accountId && email && provider === 'gmail') {
-      // Register account in backend immediately (no email fetching yet)
+    const PROVIDER_COLORS: Record<string, string> = {
+      gmail: '#ea4335',
+      office365: '#0078d4',
+    };
+
+    if (accountId && email && provider && PROVIDER_COLORS[provider]) {
       api.addAccount({
         id: accountId,
         email,
-        provider: 'gmail',
-        color: '#ea4335',
-      }).then(() => {
-        // Redirect to inbox right away — emails will load there
-        router.push('/');
-      });
+        provider,
+        color: PROVIDER_COLORS[provider],
+      }).then(() => router.push('/'));
     } else {
       router.push('/');
     }
@@ -42,7 +43,7 @@ export default function AuthCallback() {
     <div className="h-screen flex items-center justify-center bg-slate-950 text-white">
       <div className="text-center">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-slate-300 font-medium">Gmail connected!</p>
+        <p className="text-slate-300 font-medium">Account connected!</p>
         <p className="text-slate-500 text-sm mt-1">Redirecting to inbox...</p>
       </div>
     </div>

@@ -75,6 +75,22 @@ export const api = {
     return res.json();
   },
 
+  async getMoreEmails(offset: number, accountId?: string) {
+    const params = new URLSearchParams({ offset: String(offset) });
+    if (accountId) params.set('accountId', accountId);
+    const res = await fetch(`${API_URL}/api/v1/emails/more?${params}`);
+    if (!res.ok) throw new Error('Failed to fetch more emails');
+    return res.json() as Promise<{ emails: any[]; status: Record<string, { loading: boolean; total: number; loaded: number }> }>;
+  },
+
+  async getEmailsStatus(accountId?: string) {
+    const params = new URLSearchParams();
+    if (accountId) params.set('accountId', accountId);
+    const res = await fetch(`${API_URL}/api/v1/emails/status?${params}`);
+    if (!res.ok) throw new Error('Failed to fetch status');
+    return res.json() as Promise<Record<string, { loading: boolean; total: number; loaded: number }>>;
+  },
+
   async streamSummary(subject: string, body: string, onChunk: (text: string) => void) {
     const res = await fetch(`${API_URL}/api/v1/ai/summarize`, {
       method: 'POST',

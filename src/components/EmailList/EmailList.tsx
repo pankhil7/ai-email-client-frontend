@@ -3,7 +3,7 @@
 import { useEmailStore } from '@/store/emailStore';
 import { Email } from '@/types/email';
 import { Search, RefreshCw, X, Paperclip } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const PROVIDER_COLORS: Record<string, string> = {
   gmail: '#ea4335',
@@ -65,13 +65,20 @@ function EmailItem({ email, isSelected, onClick }: { email: Email; isSelected: b
 
 export default function EmailList() {
   const {
-    emails, searchResults, searchQuery, selectedEmail, loading,
+    emails, searchResults, searchQuery, selectedEmail, loading, loadingProgress,
     setSelectedEmail, markAsRead, search, setSearchQuery, clearSearch, loadEmails
   } = useEmailStore();
 
   const [searching, setSearching] = useState(false);
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
-  const displayEmails = searchResults ?? emails;
+  // Reset to page 0 when the email list or search results change
+  useEffect(() => { setPage(0); }, [emails, searchResults]);
+
+  const allEmails = searchResults ?? emails;
+  const totalPages = Math.ceil(allEmails.length / PAGE_SIZE);
+  const displayEmails = allEmails.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const handleSelect = useCallback((email: Email) => {
     setSelectedEmail(email);
@@ -90,9 +97,16 @@ export default function EmailList() {
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-700/50">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-white text-sm">
-            {searchResults ? `Results (${searchResults.length})` : `Inbox (${emails.length})`}
-          </h2>
+          <div>
+            <h2 className="font-semibold text-white text-sm">
+              {searchResults ? `Results (${searchResults.length})` : `Inbox (${emails.length})`}
+            </h2>
+            {loadingProgress && (
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Loading {loadingProgress.loaded} of {loadingProgress.total}...
+              </p>
+            )}
+          </div>
           <button
             onClick={loadEmails}
             className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
@@ -125,7 +139,7 @@ export default function EmailList() {
 
       {/* Email List */}
       <div className="flex-1 overflow-y-auto">
-        {loading && !displayEmails.length ? (
+        {loading && !allEmails.length ? (
           <div className="space-y-0">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="px-4 py-3 border-b border-slate-700/30">
@@ -156,6 +170,29 @@ export default function EmailList() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-2 border-t border-slate-700/50 bg-slate-900">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-30 hover:bg-slate-700 transition-colors"
+          >
+            ← Prev
+          </button>
+          <span className="text-xs text-slate-500">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page === totalPages - 1}
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 disabled:opacity-30 hover:bg-slate-700 transition-colors"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

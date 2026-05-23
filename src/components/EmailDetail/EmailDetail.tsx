@@ -100,12 +100,11 @@ export default function EmailDetail() {
           </button>
           <button
             onClick={() => setShowAI(!showAI)}
-            className={`p-2 rounded-lg transition-colors text-sm font-medium ${
-              showAI ? 'bg-indigo-600/20 text-indigo-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${
+              showAI ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-transparent'
             }`}
-            title="AI Assistant"
           >
-            ✨
+            ✨ <span>AI Help</span>
           </button>
         </div>
 
@@ -170,7 +169,7 @@ export default function EmailDetail() {
       </div>
 
       {/* AI Panel */}
-      {showAI && <AIPanel email={selectedEmail} onUseDraft={handleUseDraft} />}
+      {showAI && <AIPanel email={selectedEmail} onUseDraft={handleUseDraft} onClose={() => setShowAI(false)} />}
 
       {/* Quick Actions */}
       <div className="px-6 py-3 border-t border-slate-700/50 bg-slate-900/30 flex gap-2">
