@@ -104,7 +104,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       set({ emails, loading: false });
       get().startBackgroundPolling();
     } catch (err: any) {
-      logger.error({ msg: 'Failed to load emails', error: err.message });
+      logger.error({ msg: 'Failed to load emails', err });
       set({ loading: false });
     }
   },
@@ -149,7 +149,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
           set({ loadingProgress: null });
         }
       } catch (err: any) {
-        logger.warn({ msg: 'Background polling failed', error: err.message });
+        logger.warn({ msg: 'Background polling failed', err });
       }
     };
 
@@ -177,7 +177,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       logger.info({ msg: 'Search complete', count: results.length });
       set({ searchResults: results, loading: false });
     } catch (err: any) {
-      logger.error({ msg: 'Search failed', error: err.message });
+      logger.error({ msg: 'Search failed', err });
       set({ loading: false });
     }
   },
@@ -196,7 +196,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         selectedEmail: s.selectedEmail?.id === email.id ? null : s.selectedEmail,
       }));
     } catch (err: any) {
-      logger.error({ msg: 'Archive failed', emailId: email.id, error: err.message });
+      logger.error({ msg: 'Archive failed', emailId: email.id, err });
       throw err;
     }
   },
@@ -210,7 +210,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         selectedEmail: s.selectedEmail?.id === email.id ? null : s.selectedEmail,
       }));
     } catch (err: any) {
-      logger.error({ msg: 'Delete failed', emailId: email.id, error: err.message });
+      logger.error({ msg: 'Delete failed', emailId: email.id, err });
       throw err;
     }
   },
@@ -222,7 +222,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         emails: s.emails.map((e) => (e.id === email.id ? { ...e, read: true } : e)),
       }));
     } catch (err: any) {
-      logger.warn({ msg: 'Mark as read failed', emailId: email.id, error: err.message });
+      logger.warn({ msg: 'Mark as read failed', emailId: email.id, err });
     }
   },
 

@@ -40,7 +40,7 @@ export default function AuthCallback() {
         logger.info({ msg: 'Account registered, redirecting to inbox' });
         router.push('/');
       }).catch((err: any) => {
-        logger.error({ msg: 'Failed to register account', error: err.message });
+        logger.error({ msg: 'Failed to register account', err });
         router.push('/');
       });
     } else {

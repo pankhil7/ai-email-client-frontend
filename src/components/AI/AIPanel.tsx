@@ -44,7 +44,7 @@ export default function AIPanel({ email, onUseDraft, onClose }: AIPanelProps) {
       });
       logger.debug({ msg: 'AI summarize complete', emailId: email.id });
     } catch (err: any) {
-      logger.error({ msg: 'AI summarize failed', emailId: email.id, error: err.message });
+      logger.error({ msg: 'AI summarize failed', emailId: email.id, err });
     } finally {
       setLoadingSummary(false);
     }
@@ -60,7 +60,7 @@ export default function AIPanel({ email, onUseDraft, onClose }: AIPanelProps) {
       });
       logger.debug({ msg: 'AI draft reply complete', emailId: email.id });
     } catch (err: any) {
-      logger.error({ msg: 'AI draft reply failed', emailId: email.id, error: err.message });
+      logger.error({ msg: 'AI draft reply failed', emailId: email.id, err });
     } finally {
       setLoadingDraft(false);
     }
@@ -74,7 +74,7 @@ export default function AIPanel({ email, onUseDraft, onClose }: AIPanelProps) {
       logger.info({ msg: 'AI prioritize complete', emailId: email.id, score });
       setPriorityKey(getPriorityKey(score));
     } catch (err: any) {
-      logger.error({ msg: 'AI prioritize failed', emailId: email.id, error: err.message });
+      logger.error({ msg: 'AI prioritize failed', emailId: email.id, err });
     } finally {
       setLoadingPriority(false);
     }
