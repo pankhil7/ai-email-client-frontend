@@ -70,7 +70,7 @@ export default function Sidebar() {
               return (
                 <button
                   key={id}
-                  onClick={() => { setActiveFolder(id); setActiveAccount(null); }}
+                  onClick={() => { setActiveFolder(id); setActiveAccount(null); setActiveLabel(null); }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                     isActive
                       ? 'bg-indigo-600/20 text-indigo-400'
